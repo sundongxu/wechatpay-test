@@ -4,19 +4,16 @@
 #include <memory>
 #include <string>
 
-#include <grpcpp/grpcpp.h>
-
-#ifdef BAZEL_BUILD
-#include "examples/protos/helloworld.grpc.pb.h"
-#else
-#include "demo.grpc.pb.h"
-#endif
+#include "src/demo.grpc.pb.h"
+#include <grpc++/grpc++.h>
 
 using demo::BasicService;
 using demo::Request;
 using demo::Response;
 using grpc::Channel;
 using grpc::ClientContext;
+using grpc::CreateChannel;
+using grpc::SslCredentials;
 using grpc::Status;
 
 class WechatPayClient
@@ -28,30 +25,18 @@ class WechatPayClient
                     const std::string &server)
     {
         grpc::SslCredentialsOptions opts = {root, key, cert};
-        stub_ = BasicService::NewStub(grpc::CreateChannel(
-            server, grpc::SslCredentials(opts)));
+        stub_ = BasicService::NewStub(CreateChannel(
+            server, SslCredentials(opts)));
     }
 
-    // Assembles the client's payload, sends it and presents the response back
-    // from the server.
     std::string Login(const std::string &user, const std::string &password)
     {
-        // Data we are sending to the server.
         Request request;
         request.set_username(user);
         request.set_password(password);
-
-        // Container for the data we expect from the server.
         Response reply;
-
-        // Context for the client. It could be used to convey extra information to
-        // the server and/or tweak certain RPC behaviors.
         ClientContext context;
-
-        // The actual RPC.
         Status status = stub_->Login(&context, request, &reply);
-
-        // Act upon its status.
         if (status.ok())
         {
             return reply.message();
@@ -92,9 +77,9 @@ int main(int argc, char **argv)
     std::string root;
     std::string server{"localhost:50051"};
 
-    read("../crt/client.crt", cert);
-    read("../crt/client.key", key);
-    read("../crt/ca.crt", root);
+    read("/Users/sundongxu/Code/Git/Mine/Work/wechatpay/wechatpay/wechatpay-test/crt/client.crt", cert);
+    read("/Users/sundongxu/Code/Git/Mine/Work/wechatpay/wechatpay/wechatpay-test/crt/client.key", key);
+    read("/Users/sundongxu/Code/Git/Mine/Work/wechatpay/wechatpay/wechatpay-test/crt/ca.crt", root);
 
     WechatPayClient client(cert, key, root, server);
 
