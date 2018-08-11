@@ -6,20 +6,22 @@ package demo;
 
 // 请求参数结构
 message Request {
-    string username = 1;     // 用户名
-    string password = 2;     // 密码
-    string device_id = 3;    // 设备唯一标识uuid
+    string username = 1;                            // 用户名
+    string password = 2;                            // 密码
+    string device_id = 3;                           // 设备唯一标识uuid
+    string echo_content = 4;                        // 请求回显内容
 }
 
 // 响应参数结构
 message Response {
-    int32 status_code = 1;   // 状态码
-    string message = 2;      // 原因描述
+    int32 status_code = 1;                          // 状态码
+    string echo_content = 2;                        // 回复回显内容
 }
 
 // 声明服务，由服务端具体实现
 service BasicService {
-    rpc Register (Request) returns (Response) {}
-    rpc Login (Request) returns (Response) {}
-    rpc Logout (Request) returns (Response) {}
+    rpc Register (Request) returns (Response) {}    // 注册服务
+    rpc Login (Request) returns (Response) {}       // 登录服务
+    rpc Logout (Request) returns (Response) {}      // 登出服务
+    rpc Interact (Request) returns (Response) {}    // 交互服务(回显echo)
 }

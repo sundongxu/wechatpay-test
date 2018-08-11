@@ -1,4 +1,5 @@
 # protobuf & grpc rules
+# Enable C++ support by loading the dependencies
 git_repository(
   name = "org_pubref_rules_protobuf",
   remote = "https://github.com/pubref/rules_protobuf",

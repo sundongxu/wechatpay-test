@@ -9,19 +9,39 @@ cc_proto_library(
     with_grpc = True,
 )
 
-cc_binary(
-    name = "wechatpay_secure_server",
-    srcs = ["wechatpay_secure_server.cc"],
-    deps = [
-        ":demo_proto",
-    ],
+cc_import(
+    name = "hiredis",
+    static_library = "libhiredis.a",
+)
+
+cc_import(
+    name = "bcrypt",
+    static_library = "libbcrypt.a",
 )
 
 cc_binary(
-    name = "wechatpay_secure_client",
-    srcs = ["wechatpay_secure_client.cc"],
+    name = "server",
+    srcs = ["server.cc"],
+    deps = [
+        ":demo_proto",
+        ":hiredis",
+        ":bcrypt",
+    ],
+   copts = [
+       "-Isrc/include",
+   ],
+   linkstatic = 1,
+)
+
+cc_binary(
+    name = "client",
+    srcs = ["client.cc"],
     deps = [
         ":demo_proto",
     ],
+    copts = [
+        "-Isrc/include",
+    ],
+    linkstatic = 1,
 )
 

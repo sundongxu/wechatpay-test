@@ -36,12 +36,12 @@ PROTOS_PATH = .
 
 vpath %.proto $(PROTOS_PATH)
 
-all: system-check wechatpay_secure_client wechatpay_secure_server 
+all: system-check wechatpay_client wechatpay_server 
 
-wechatpay_secure_client: demo.pb.o demo.grpc.pb.o wechatpay_secure_client.o
+wechatpay_client: demo.pb.o demo.grpc.pb.o wechatpay_client.o
 	$(CXX) $^ $(LDFLAGS) -o $@
 
-wechatpay_secure_server: demo.pb.o demo.grpc.pb.o wechatpay_secure_server.o
+wechatpay_server: demo.pb.o demo.grpc.pb.o wechatpay_server.o
 	$(CXX) $^ $(LDFLAGS) -o $@
 
 .PRECIOUS: %.grpc.pb.cc
