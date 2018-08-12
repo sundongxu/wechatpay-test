@@ -7,9 +7,10 @@ RedisHandler *RedisHandler::handler = nullptr;
 
 RedisHandler *RedisHandler::GetInstance(const char *ip, const int port)
 {
-    if (handler != nullptr)
+    if (handler == nullptr)
+    {
         handler = new RedisHandler(ip, port);
-    cout << "RedisHandler Instantiated!" << endl;
+    }
     return handler;
 }
 
@@ -24,18 +25,14 @@ void RedisHandler::DestoryInstance()
 
 int RedisHandler::Connect()
 {
-    cout << "Connecting to Redis..." << endl;
     struct timeval timeout = {1, 500000};
-    cout << "Why Why Why!!!" << endl;
-    cout << "Redis Server IP" << svrIP << endl;
-    context = redisConnectWithTimeout("127.0.0.1", 6379, timeout); // docker部署redis服务并映射到外部端口6379
-    cout << "Connection should be established..." << endl;
+    context = redisConnectWithTimeout(svrIP, svrPort, timeout); // docker部署redis服务并映射到外部端口6379
     if (context != nullptr && context->err != 0)
     {
         cout << "连接到Redis服务时出错" << endl;
         return -1;
     }
-    cout << "Redis连接成功！" << endl;
+    // cout << "Redis连接成功！" << endl;
     return 0;
 }
 
@@ -77,12 +74,17 @@ void RedisHandler::SetString(const string &data)
 
 void RedisHandler::GetString(const string &key, string &value)
 {
+    cout << "Redis GET Invoked!" << endl;
     FreeReply();
+    cout << "Before Executing GET" << endl;
     reply = (redisReply *)redisCommand(context, "GET %s", key.c_str());
+    cout << "After Executing GEI" << endl;
     if (!IsError() && reply->type == REDIS_REPLY_STRING)
     {
+        cout << "Key已存在，GET 获取成功！" << endl;
         value = reply->str;
     }
+    cout << "Redis GEI Finished!" << endl;
 }
 
 bool RedisHandler::IsError()

@@ -150,7 +150,7 @@ int WechatPayClient::Logout()
                 user = nullptr;
                 break;
             case USER_LOGIN_ANOTHER_PLACE:
-                cout << "下线失败：用户已在别处登录！" << endl;
+                cout << "下线失败：用户已在别处登录，本客户端已强制下线！" << endl;
                 isLogin = false;
                 delete user;
                 user = nullptr;
@@ -201,7 +201,7 @@ int WechatPayClient::Interact(const string &msg)
                 cout << "服务端回复内容：" << reply.echo_content() << endl;
                 break;
             case USER_LOGIN_ANOTHER_PLACE:
-                cout << "交互失败：用户已在别处登录！" << endl;
+                cout << "交互失败：用户已在别处登录，请登录后重试！" << endl;
                 isLogin = false;
                 delete user;
                 user = nullptr;

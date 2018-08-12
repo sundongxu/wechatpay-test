@@ -14,9 +14,7 @@ Status WechatPayServiceImpl::Register(ServerContext *context,
     cout << "用户名：" << username << ", 密码：" << password << endl;
 
     // 查询是否已存在相同用户名
-    cout << "Redis Server IP(Default):" << REDIS_SERVER_IP << ", Port(Default):" << REDIS_SERVER_PORT << endl; 
     handler = RedisHandler::GetInstance(REDIS_SERVER_IP, REDIS_SERVER_PORT);
-    cout << "RedisHandler Got" << endl;
     int ret = handler->Connect();
     if (ret != 0)
     {
@@ -25,7 +23,6 @@ Status WechatPayServiceImpl::Register(ServerContext *context,
     }
     else
     {
-        cout << "Redis Connected!" << endl;
         string strVal;
         handler->GetString(username, strVal);
         if (strVal == "")

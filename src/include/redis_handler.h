@@ -27,7 +27,8 @@ private:
   // 私有构造，单例模式
   RedisHandler(const char *ip, const int port)
   {
-    cout << "RedisHandler Constructed!" << endl;
+    context = nullptr;
+    reply = nullptr;
     svrIP = ip;
     svrPort = port;
   };
