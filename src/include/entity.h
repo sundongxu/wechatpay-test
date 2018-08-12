@@ -8,10 +8,10 @@
 #include <string>
 #include <vector>
 
-#include "demo.grpc.pb.h"
+#include "src/demo.grpc.pb.h"
 #include <grpc++/grpc++.h>
-#include "redis_handler.h"
-#include "util.h"
+#include "src/include/redis_handler.h"
+#include "src/include/util.h"
 
 using demo::BasicService;
 using demo::Request;

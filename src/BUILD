@@ -19,29 +19,90 @@ cc_import(
     static_library = "libbcrypt.a",
 )
 
-cc_binary(
-    name = "server",
-    srcs = ["server.cc"],
+cc_library(
+    name = "comm",
+    hdrs = [
+        "include/comm_def.h",
+    ],
+)
+
+cc_library(
+    name = "util",
+    hdrs = [
+        "include/util.h",
+    ],
+)
+
+cc_library(
+    name = "hiredis_handler",
+    hdrs = glob([
+        "include/hiredis/*.h",
+    ]),
     deps = [
-        ":demo_proto",
         ":hiredis",
+    ],
+)
+
+cc_library(
+    name = "redis_handler",
+    hdrs = [
+        "include/redis_handler.h",
+    ],
+    srcs = [
+        "redis_handler.cc",
+    ],
+    deps = [
+        ":hiredis_handler",
+    ],
+)
+
+cc_library(
+    name = "bcrypt_handler",
+    hdrs = glob([
+        "include/bcrypt/*.hpp",
+        "include/bcrypt/*.h",
+    ]),
+    deps = [
         ":bcrypt",
     ],
-   copts = [
-       "-Isrc/include",
-   ],
-   linkstatic = 1,
+)
+
+cc_library(
+    name = "entity",
+    hdrs = [
+        "include/entity.h",
+    ],
+    srcs = [
+        "wcp_client.cc",
+        "wcp_server.cc",
+    ],
+    deps = [
+        ":comm",
+        ":util",
+        ":redis_handler",
+        ":bcrypt_handler",
+        ":demo_proto",
+    ],
 )
 
 cc_binary(
     name = "client",
-    srcs = ["client.cc"],
+    srcs = [
+        "client.cc",
+        ],
     deps = [
-        ":demo_proto",
+        ":entity",
     ],
-    copts = [
-        "-Isrc/include",
-    ],
-    linkstatic = 1,
 )
+
+cc_binary(
+    name = "server",
+    srcs = [
+        "server.cc",
+        ],
+    deps = [
+        ":entity",
+    ],
+)
+
 

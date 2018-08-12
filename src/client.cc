@@ -1,5 +1,5 @@
-#include "entity.h"
-#include "comm_def.h"
+#include "src/include/entity.h"
+#include "src/include/comm_def.h"
 
 using namespace std;
 
@@ -10,9 +10,9 @@ int main(int argc, char **argv)
     string root;
     string server{"localhost:50051"};
 
-    util::read("../crt/client.crt", cert);
-    util::read("../crt/client.key", key);
-    util::read("../crt/ca.crt", root);
+    util::read("/Users/sundongxu/Code/Git/Mine/Work/wechatpay/wechatpay/wechatpay-test/crt/client.crt", cert);
+    util::read("/Users/sundongxu/Code/Git/Mine/Work/wechatpay/wechatpay/wechatpay-test/crt/client.key", key);
+    util::read("/Users/sundongxu/Code/Git/Mine/Work/wechatpay/wechatpay/wechatpay-test/crt/ca.crt", root);
 
     WechatPayClient client(cert, key, root, server);
 

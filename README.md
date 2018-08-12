@@ -60,6 +60,38 @@
 |403|USER_LOGIN_ANOTHER_PLACE|用户已在别处登录，用于登出及交互操作|
 |500|DB_NOT_CONNECTED|数据库连接失败，服务端错误|
 
+## 编译运行
+---
+### 依赖安装
+源代码依赖库：
+1. [**grpc**]()
+2. [**bazel**]()
+2. [**hiredis**]()
+3. [**libbcrypt**]()
+
+执行如下命令安装依赖：
+```shell
+cd lib/third_party
+chmod a+x build_deps.sh
+./build_deps.sh
+```
+
+### Redis安装
+
+
+### 编译
+支持**make**与**bazel**两种构建方式，编译生成两个可执行文件：`server`和`client`
+#### make
+执行如下命令编译：
+```shell
+cd src
+make -j
+```
+#### bazel
+```shell
+
+```
+
 ## 完成进度
 ---
 ### Day 1(8月7日，周二)
@@ -74,3 +106,6 @@
 4. 编写client、server相关功能及交互代码(全部完成)
 
 ### Day 3(8月12日，周日)
+1. 更新`Makefile`，编译通过
+2. 调试功能代码，测试通过
+3. 修改`BUILD`文件，编译报错：头文件未找到

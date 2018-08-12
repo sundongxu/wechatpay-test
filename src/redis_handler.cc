@@ -1,4 +1,4 @@
-#include "redis_handler.h"
+#include "src/include/redis_handler.h"
 #include <iostream>
 
 using namespace std;
@@ -74,17 +74,12 @@ void RedisHandler::SetString(const string &data)
 
 void RedisHandler::GetString(const string &key, string &value)
 {
-    cout << "Redis GET Invoked!" << endl;
     FreeReply();
-    cout << "Before Executing GET" << endl;
     reply = (redisReply *)redisCommand(context, "GET %s", key.c_str());
-    cout << "After Executing GEI" << endl;
     if (!IsError() && reply->type == REDIS_REPLY_STRING)
     {
-        cout << "Key已存在，GET 获取成功！" << endl;
         value = reply->str;
     }
-    cout << "Redis GEI Finished!" << endl;
 }
 
 bool RedisHandler::IsError()
@@ -95,7 +90,7 @@ bool RedisHandler::IsError()
         cout << "Redis连接异常，尝试重连..." << endl;
         FreeReply();
         DisConnect();
-        int ret = Connect();
+        Connect();
         return true;
     }
     return false;

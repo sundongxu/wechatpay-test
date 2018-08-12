@@ -1,16 +1,16 @@
-#include "entity.h"
+#include "src/include/entity.h"
 
 void RunServer()
 {
-    std::string server_address("localhost:50051");
+    std::string server_address("0.0.0.0:50051");
 
     std::string key;
     std::string cert;
     std::string root;
 
-    util::read("../crt/server.crt", cert);
-    util::read("../crt/server.key", key);
-    util::read("../crt/ca.crt", root);
+    util::read("/Users/sundongxu/Code/Git/Mine/Work/wechatpay/wechatpay/wechatpay-test/crt/server.crt", cert);
+    util::read("/Users/sundongxu/Code/Git/Mine/Work/wechatpay/wechatpay/wechatpay-test/crt/server.key", key);
+    util::read("/Users/sundongxu/Code/Git/Mine/Work/wechatpay/wechatpay/wechatpay-test/crt/ca.crt", root);
 
     ServerBuilder builder;
 

@@ -1,7 +1,7 @@
 #ifndef REDIS_HANDLER_H
 #define REDIS_HANDLER_H
 
-#include "hiredis.h"
+#include "src/include/hiredis/hiredis.h"
 #include <string>
 #include <sstream>
 #include <iostream>

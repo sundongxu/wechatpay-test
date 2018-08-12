@@ -1,0 +1,6 @@
+[submodule "third_party/hiredis"]
+	path = third_party/hiredis
+	url = https://github.com/redis/hiredis.git
+[submodule "third_party/libbcrypt"]
+	path = third_party/libbcrypt
+	url = https://github.com/sundongxu/libbcrypt.git
