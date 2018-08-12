@@ -4,15 +4,20 @@
 
 Status WechatPayServiceImpl::Register(ServerContext *context,
                                       const Request *request,
-                                      Response *reply) override
+                                      Response *reply)
 {
+    cout << "Register Invoked!" << endl;
     // 注册逻辑
     string username = request->username();
     string password = request->password();
 
+    cout << "用户名：" << username << ", 密码：" << password << endl;
+
     // 查询是否已存在相同用户名
-    handler = RedisHandler::GetInstance();
-    int ret = handler->Connect(REDIS_SERVER_IP, REDIS_SERVER_PORT);
+    cout << "Redis Server IP(Default):" << REDIS_SERVER_IP << ", Port(Default):" << REDIS_SERVER_PORT << endl; 
+    handler = RedisHandler::GetInstance(REDIS_SERVER_IP, REDIS_SERVER_PORT);
+    cout << "RedisHandler Got" << endl;
+    int ret = handler->Connect();
     if (ret != 0)
     {
         // redis连接失败
@@ -20,7 +25,9 @@ Status WechatPayServiceImpl::Register(ServerContext *context,
     }
     else
     {
-        string strVal = handler->GetString(username);
+        cout << "Redis Connected!" << endl;
+        string strVal;
+        handler->GetString(username, strVal);
         if (strVal == "")
         {
             // 用户名不存在，可以注册
@@ -34,12 +41,13 @@ Status WechatPayServiceImpl::Register(ServerContext *context,
             reply->set_status_code(USER_ALREADY_EXIST);
         }
     }
+    cout << "Register Finished!" << endl;
     return Status::OK;
 }
 
 Status WechatPayServiceImpl::Login(ServerContext *context,
                                    const Request *request,
-                                   Response *reply) override
+                                   Response *reply)
 {
     // 登录逻辑
     string username = request->username();
@@ -47,8 +55,8 @@ Status WechatPayServiceImpl::Login(ServerContext *context,
     string deviceId = request->device_id();
 
     // 查询数据库，验证密码hash
-    handler = RedisHandler::GetInstance();
-    int ret = handler->Connect(REDIS_SERVER_IP, REDIS_SERVER_PORT);
+    handler = RedisHandler::GetInstance(REDIS_SERVER_IP, REDIS_SERVER_PORT);
+    int ret = handler->Connect();
     if (ret != 0)
     {
         // redis连接失败
@@ -56,7 +64,8 @@ Status WechatPayServiceImpl::Login(ServerContext *context,
     }
     else
     {
-        string strVal = handler->GetString(username);
+        string strVal;
+        handler->GetString(username, strVal);
         if (strVal == "")
         {
             // 用户名尚未注册，不可登录
@@ -83,7 +92,7 @@ Status WechatPayServiceImpl::Login(ServerContext *context,
                     // 未登录，则登录
                     reply->set_status_code(USER_REQUEST_SUCCESS);
                 }
-                active_users[username] = device_id;
+                active_users[username] = deviceId;
             }
             else
             {
@@ -98,7 +107,7 @@ Status WechatPayServiceImpl::Login(ServerContext *context,
 
 Status WechatPayServiceImpl::Logout(ServerContext *context,
                                     const Request *request,
-                                    Response *reply) override
+                                    Response *reply)
 {
     // 登出逻辑
     string username = request->username();
@@ -116,7 +125,7 @@ Status WechatPayServiceImpl::Logout(ServerContext *context,
             // 在线设备仍是本终端
             active_users.erase(iter);
             reply->set_status_code(USER_REQUEST_SUCCESS);
-         }
+        }
         else
         {
             // 在线设备不是本终端
@@ -128,7 +137,7 @@ Status WechatPayServiceImpl::Logout(ServerContext *context,
 
 Status WechatPayServiceImpl::Interact(ServerContext *context,
                                       const Request *request,
-                                      Response *reply) override
+                                      Response *reply)
 {
     // 交互逻辑
     string username = request->username();
@@ -153,5 +162,5 @@ Status WechatPayServiceImpl::Interact(ServerContext *context,
         }
     }
 
-    return Status::OK
+    return Status::OK;
 }

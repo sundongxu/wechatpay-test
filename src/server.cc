@@ -8,9 +8,9 @@ void RunServer()
     std::string cert;
     std::string root;
 
-    util::read("crt/server.crt", cert);
-    util::read("crt/server.key", key);
-    util::read("crt/ca.crt", root);
+    util::read("../crt/server.crt", cert);
+    util::read("../crt/server.key", key);
+    util::read("../crt/ca.crt", root);
 
     ServerBuilder builder;
 

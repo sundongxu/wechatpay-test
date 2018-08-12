@@ -4,6 +4,7 @@
 #include <uuid/uuid.h>
 #include <string>
 #include <sstream>
+#include <iostream>
 
 using namespace std;
 
@@ -12,10 +13,11 @@ namespace util
 inline int generateDeviceId(string &deviceId)
 {
     uuid_t uuid;
-    char *in = nullptr;
+    char out[37];
     uuid_generate(uuid);
-    uuid_parse(in, uuid);
-    deviceId = in;
+    uuid_unparse_lower(uuid, out);
+    deviceId = out;
+    cout << "当前设备UUID：" << deviceId << endl;
     return 0;
 }
 

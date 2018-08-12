@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "src/demo.grpc.pb.h"
+#include "demo.grpc.pb.h"
 #include <grpc++/grpc++.h>
 #include "redis_handler.h"
 #include "util.h"
@@ -28,6 +28,8 @@ using grpc::ServerContext;
 using grpc::SslServerCredentialsOptions;
 
 using namespace std;
+
+class User;
 
 // 客户端
 class WechatPayClient
@@ -85,7 +87,7 @@ public:
   inline string &getName() { return name; }
   inline void setName(const string &strName) { name = strName; }
   inline string &getPassWord() { return password; }
-  inline string &setPassWord(const string &strPassword) { password = strPassword; }
+  inline void setPassWord(const string &strPassword) { password = strPassword; }
 
 private:
   string name;

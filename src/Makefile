@@ -28,6 +28,7 @@ LDFLAGS += -L/usr/local/lib `pkg-config --libs protobuf grpc++ grpc`\
            -Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed\
            -ldl
 endif
+INC = -Iinclude -Iinclude/hiredis -Iinclude/bcrypt
 PROTOC = protoc
 GRPC_CPP_PLUGIN = grpc_cpp_plugin
 GRPC_CPP_PLUGIN_PATH ?= `which $(GRPC_CPP_PLUGIN)`
@@ -36,13 +37,16 @@ PROTOS_PATH = .
 
 vpath %.proto $(PROTOS_PATH)
 
-all: system-check wechatpay_client wechatpay_server 
+all: system-check client server 
 
-wechatpay_client: demo.pb.o demo.grpc.pb.o wechatpay_client.o
-	$(CXX) $^ $(LDFLAGS) -o $@
+client: demo.pb.o demo.grpc.pb.o wcp_client.o client.o 
+	$(CXX) $^ $(INC) $(LDFLAGS) -o $@
 
-wechatpay_server: demo.pb.o demo.grpc.pb.o wechatpay_server.o
-	$(CXX) $^ $(LDFLAGS) -o $@
+server: demo.pb.o demo.grpc.pb.o redis_handler.o wcp_server.o server.o
+	$(CXX) $^ $(INC) $(LDFLAGS) -lhiredis -lbcrypt -o $@
+
+%.o: %.cc
+	$(CXX) $(CXXFLAGS) -c $< $(INC)
 
 .PRECIOUS: %.grpc.pb.cc
 %.grpc.pb.cc: %.proto
@@ -53,7 +57,7 @@ wechatpay_server: demo.pb.o demo.grpc.pb.o wechatpay_server.o
 	$(PROTOC) -I $(PROTOS_PATH) --cpp_out=. $<
 
 clean:
-	rm -f *.o *.pb.cc *.pb.h wechatpay_secure_client wechatpay_secure_server
+	rm -f *.o *.pb.cc *.pb.h client server
 
 
 # The following is to test your system and ensure a smoother experience.
