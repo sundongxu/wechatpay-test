@@ -68,7 +68,7 @@
 2. [**hiredis**](https://github.com/redis/hiredis)
 3. [**libbcrypt**](https://github.com/trusch/libbcrypt)
 
-以上依赖均以**子模块(submodules)**形式添加到本项目，执行以下命令将依赖下载到本地：
+以上依赖均以子模块(**submodules**)形式添加到本项目，执行以下命令将依赖下载到本地：
 ```shell
 git clone 
 git submodule update --init
@@ -126,7 +126,19 @@ cd bazel-bin/src
 ./client
 ```
 ### 系统截图
+#### 客户端运行功能测试
+![客户端运行功能测试](https://github.com/sundongxu/wechatpay-test/raw/master/img/client_normal_test.png)
 
+#### 踢下线功能测试
+第一个登录的客户端：
+![第一个登陆的客户端](https://github.com/sundongxu/wechatpay-test/raw/master/img/client_terminal_1.png)
+
+另一个登录相同用户的客户端：
+![另一个登录的客户端](https://github.com/sundongxu/wechatpay-test/raw/master/img/client_terminal_2.png)
+
+#### 后端服务调用
+服务器服务调用情况：
+![服务端服务调用](https://github.com/sundongxu/wechatpay-test/raw/master/img/server.png)
 
 ## 完成进度
 ---
