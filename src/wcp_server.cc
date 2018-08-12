@@ -6,7 +6,6 @@ Status WechatPayServiceImpl::Register(ServerContext *context,
                                       const Request *request,
                                       Response *reply)
 {
-    cout << "Register Invoked!" << endl;
     // 注册逻辑
     string username = request->username();
     string password = request->password();
@@ -38,7 +37,6 @@ Status WechatPayServiceImpl::Register(ServerContext *context,
             reply->set_status_code(USER_ALREADY_EXIST);
         }
     }
-    cout << "Register Finished!" << endl;
     return Status::OK;
 }
 

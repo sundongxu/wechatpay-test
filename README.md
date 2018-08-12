@@ -64,19 +64,46 @@
 ---
 ### 依赖安装
 源代码依赖库：
-1. [**grpc**]()
-2. [**hiredis**]()
-3. [**libbcrypt**]()
+1. [**grpc**](https://github.com/grpc/grpc)
+2. [**hiredis**](https://github.com/redis/hiredis)
+3. [**libbcrypt**](https://github.com/trusch/libbcrypt)
 
-执行如下命令安装依赖：
+以上依赖均以**子模块(submodules)**形式添加到本项目，执行以下命令将依赖下载到本地：
 ```shell
-cd lib/third_party
-chmod a+x build_deps.sh
-./build_deps.sh
+git clone 
+git submodule update --init
 ```
 
-### Redis安装
+执行以下命令配置**grpc**依赖：
+```shell
+cd third_party/grpc
+git submodule update --init # 将grpc的依赖下载到本地
+# 配置grpc的protobuf依赖
+cd third_party/protobuf
+make && sudo make install # 安装protobuf依赖
+cd ..
+make && sudo make install # 安装grpc依赖
+```
 
+执行以下命令配置**hiredis**依赖：
+```shell
+cd third_party/hiredis
+make & sudo make install # 安装hiredis依赖
+```
+
+执行如下命令安装**libbcrypt**依赖：
+```shell
+cd third_party/libbcrypt
+make & sudo make install # 安装libbcrypt依赖
+```
+
+### Redis部署
+采用**Docker**部署**Redis**服务，安装**Docker**后执行如下命令：
+```shell
+docker pull redis
+docker run -d -p 6379:6379 redis 
+```
+在Docker中以守护进程模式启动Redis，并映射到外部端口6379
 
 ### 编译
 支持**make**与**bazel**两种构建方式，编译生成两个可执行文件：`server`和`client`
@@ -88,8 +115,18 @@ make -j
 ```
 #### bazel
 ```shell
-
+bazel build //src:all
 ```
+### 运行
+```shell
+cd bazel-bin/src
+# 第一个终端启动服务器
+./server
+# 其它终端启动客户端
+./client
+```
+### 系统截图
+
 
 ## 完成进度
 ---
