@@ -10,7 +10,7 @@ Status WechatPayServiceImpl::Register(ServerContext *context,
     string username = request->username();
     string password = request->password();
 
-    cout << "用户名：" << username << ", 密码：" << password << endl;
+    cout << "注册服务，用户名：" << username << endl;
 
     // 查询是否已存在相同用户名
     handler = RedisHandler::GetInstance(REDIS_SERVER_IP, REDIS_SERVER_PORT);
@@ -48,6 +48,8 @@ Status WechatPayServiceImpl::Login(ServerContext *context,
     string username = request->username();
     string password = request->password();
     string deviceId = request->device_id();
+
+    cout << "登录服务，用户名：" << username << endl;
 
     // 查询数据库，验证密码hash
     handler = RedisHandler::GetInstance(REDIS_SERVER_IP, REDIS_SERVER_PORT);
@@ -108,6 +110,8 @@ Status WechatPayServiceImpl::Logout(ServerContext *context,
     string username = request->username();
     string deviceId = request->device_id();
 
+    cout << "登出服务，用户名：" << username << endl;
+
     // 先在在线用户列表中寻找
     auto iter = active_users.find(username);
     if (iter != active_users.end())
@@ -127,6 +131,11 @@ Status WechatPayServiceImpl::Logout(ServerContext *context,
             reply->set_status_code(USER_LOGIN_ANOTHER_PLACE);
         }
     }
+    else
+    {
+        // 该用户已在别处登录并登出，将本终端踢出，本终端登出请求失败
+        reply->set_status_code(USER_LOGIN_ANOTHER_PLACE);
+    }
     return Status::OK;
 }
 
@@ -138,6 +147,8 @@ Status WechatPayServiceImpl::Interact(ServerContext *context,
     string username = request->username();
     string deviceId = request->device_id();
     string echoContent = request->echo_content();
+
+    cout << "交互服务，用户名：" << username << endl;
 
     // 查询在线用户列表
     auto iter = active_users.find(username);
@@ -155,6 +166,11 @@ Status WechatPayServiceImpl::Interact(ServerContext *context,
             // 在线设备不是本终端
             reply->set_status_code(USER_LOGIN_ANOTHER_PLACE);
         }
+    }
+    else
+    {
+        // 该用户已在别处登录并登出，将本终端踢出，本终端交互请求失败
+        reply->set_status_code(USER_LOGIN_ANOTHER_PLACE);
     }
 
     return Status::OK;

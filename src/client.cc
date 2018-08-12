@@ -118,6 +118,7 @@ int main(int argc, char **argv)
             case CMD_QUIT:
             {
                 cout << "-----关闭客户端-----" << endl;
+                ret = client.Logout();  // 退出前发出下线请求
                 stop = true;
                 break;
             }
