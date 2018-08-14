@@ -148,18 +148,21 @@ cd bazel-bin/src
 ```
 ### 系统截图
 #### 客户端运行功能测试
-![客户端运行功能测试](https://github.com/sundongxu/wechatpay-test/raw/master/img/push/client_normal_test.png)
+客户端各项功能测试：
+![客户端运行功能测试](https://github.com/sundongxu/wechatpay-test/raw/master/img/push/normal_test_client.png)
+
+对应后端服务调用情况：
+![服务端运行功能测试](https://github.com/sundongxu/wechatpay-test/raw/master/img/push/normal_test_server.png)
 
 #### 踢下线功能测试
 第一个登录的客户端：
-![第一个登陆的客户端](https://github.com/sundongxu/wechatpay-test/raw/master/img/push/client_terminal_1.png)
+![第一个登陆的客户端](https://github.com/sundongxu/wechatpay-test/raw/master/img/push/kickoff_test_client_old.png)
 
 另一个登录相同用户的客户端：
-![另一个登录的客户端](https://github.com/sundongxu/wechatpay-test/raw/master/img/push/client_terminal_2.png)
+![另一个登录的客户端](https://github.com/sundongxu/wechatpay-test/raw/master/img/push/kickoff_test_client_new.png)
 
-#### 后端服务调用
-服务器服务调用情况：
-![服务端服务调用](https://github.com/sundongxu/wechatpay-test/raw/master/img/push/server.png)
+对应后端服务调用情况：
+![服务端服务调用](https://github.com/sundongxu/wechatpay-test/raw/master/img/push/kickoff_test_server.png)
 
 ## 完成进度
 ---
