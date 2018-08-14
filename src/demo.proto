@@ -19,9 +19,14 @@ message Response {
 }
 
 // 声明服务，由服务端具体实现
-service BasicService {
+service ServerService {
     rpc Register (Request) returns (Response) {}    // 注册服务
     rpc Login (Request) returns (Response) {}       // 登录服务
     rpc Logout (Request) returns (Response) {}      // 登出服务
     rpc Interact (Request) returns (Response) {}    // 交互服务(回显echo)
+}
+
+// 声明服务，由客户端具体实现
+service ClientService {
+    rpc KickOff (Request) returns (Response) {}     // 踢下线服务
 }

@@ -2,13 +2,16 @@
 #include "src/include/comm_def.h"
 #include "src/include/bcrypt/BCrypt.hpp"
 
-Status WechatPayServiceImpl::Register(ServerContext *context,
-                                      const Request *request,
-                                      Response *reply)
+Status WechatPayServerServiceImpl::Register(ServerContext *context,
+                                            const Request *request,
+                                            Response *reply)
 {
     // 注册逻辑
     string username = request->username();
     string password = request->password();
+
+    // grpc::string peerUri = context->peer();
+    // cout << "ServerContext URI:" << peerUri << endl;
 
     cout << "注册服务，用户名：" << username << endl;
 
@@ -40,16 +43,20 @@ Status WechatPayServiceImpl::Register(ServerContext *context,
     return Status::OK;
 }
 
-Status WechatPayServiceImpl::Login(ServerContext *context,
-                                   const Request *request,
-                                   Response *reply)
+Status WechatPayServerServiceImpl::Login(ServerContext *context,
+                                         const Request *request,
+                                         Response *reply)
 {
     // 登录逻辑
     string username = request->username();
     string password = request->password();
     string deviceId = request->device_id();
 
+    // grpc::string peerUri = context->peer();
+    // cout << "ServerContext URI:" << peerUri << endl;
+
     cout << "登录服务，用户名：" << username << endl;
+    cout << "请求登录的客户端的设备ID：" << deviceId << endl;
 
     // 查询数据库，验证密码hash
     handler = RedisHandler::GetInstance(REDIS_SERVER_IP, REDIS_SERVER_PORT);
@@ -82,7 +89,13 @@ Status WechatPayServiceImpl::Login(ServerContext *context,
                 {
                     // 之前已登录，仍需验证密码
                     // 密码正确则将原终端踢下线，即修改在线用户列表
-                    reply->set_status_code(USER_KICK_OTHERS_OFF);
+                    reply->set_status_code(USER_KICK_OTHERS_OFF_SUCCESS);
+                    // 调用KickOff接口，注意这里要传的参数是旧设备ID
+                    int ret = KickOff(context->peer(), username, active_users[username]);
+                    if (ret != 0)
+                    {
+                        cout << "踢下线时发生错误！" << endl;
+                    }
                 }
                 else
                 {
@@ -102,9 +115,66 @@ Status WechatPayServiceImpl::Login(ServerContext *context,
     return Status::OK;
 }
 
-Status WechatPayServiceImpl::Logout(ServerContext *context,
-                                    const Request *request,
-                                    Response *reply)
+int WechatPayServerServiceImpl::KickOff(const string &peerUri, const string &username, const string &deviceId)
+{
+    // 踢设备ID为DeviceId的设备下线，客户端的IP:port信息存储在peerUrl
+    // 使用stub调用客户端的KickOff方法令其下线
+    string key;
+    string cert;
+    string root;
+
+    util::read(PATH_SERVER_CERT, cert);
+    util::read(PATH_SERVER_KEY, key);
+    util::read(PATH_CA_CERT, root);
+
+    grpc::SslCredentialsOptions opts = {root, key, cert};
+    // string client{peerUri}; // IPv6地址有坑，先提取出端口号吧
+
+    // size_t pos = peerUri.find_last_of(":");
+    // string port = peerUri.substr(pos + 1);
+    // cout << "客户端端口号：" << port << endl;
+    string client{"localhost:50052"};
+    // cout << "客户端地址：" << client << endl;
+    unique_ptr<ClientService::Stub> stub = ClientService::NewStub(CreateChannel(
+        client, SslCredentials(opts)));
+    ;
+
+    // 构造请求
+    Request request;
+    request.set_username(username);
+    request.set_device_id(deviceId);
+
+    Response reply;
+    ClientContext context;
+
+    Status status = stub->KickOff(&context, request, &reply);  // 让客户端崩了
+    if (status.ok())
+    {
+        // RPC调用成功。根据返回状态码确定注册结果
+        switch (reply.status_code())
+        {
+        case USER_KICKED_OFF_SUCCESS:
+            cout << "旧设备挤下线成功！" << endl;
+            break;
+        case USER_KICKED_OFF_FAILURE:
+            cout << "旧设备挤下线失败！" << endl;
+            return -1;
+        }
+    }
+    else
+    {
+        // RPC调用失败
+        cout << "挤下线失败：RPC调用失败！" << endl;
+        cout << status.error_code() << ": " << status.error_message()
+             << endl;
+        return -1;
+    }
+    return 0;
+}
+
+Status WechatPayServerServiceImpl::Logout(ServerContext *context,
+                                          const Request *request,
+                                          Response *reply)
 {
     // 登出逻辑
     string username = request->username();
@@ -139,9 +209,9 @@ Status WechatPayServiceImpl::Logout(ServerContext *context,
     return Status::OK;
 }
 
-Status WechatPayServiceImpl::Interact(ServerContext *context,
-                                      const Request *request,
-                                      Response *reply)
+Status WechatPayServerServiceImpl::Interact(ServerContext *context,
+                                            const Request *request,
+                                            Response *reply)
 {
     // 交互逻辑
     string username = request->username();

@@ -1,16 +1,18 @@
 #include "src/include/entity.h"
+#include "src/include/comm_def.h"
 
+// 服务端在50051端口上监听来自客户端的服务请求
 void RunServer()
 {
-    std::string server_address("0.0.0.0:50051");
+    string server_address("0.0.0.0:50051");
 
-    std::string key;
-    std::string cert;
-    std::string root;
+    string key;
+    string cert;
+    string root;
 
-    util::read("/Users/sundongxu/Code/Git/Mine/Work/wechatpay/wechatpay/wechatpay-test/crt/server.crt", cert);
-    util::read("/Users/sundongxu/Code/Git/Mine/Work/wechatpay/wechatpay/wechatpay-test/crt/server.key", key);
-    util::read("/Users/sundongxu/Code/Git/Mine/Work/wechatpay/wechatpay/wechatpay-test/crt/ca.crt", root);
+    util::read(PATH_SERVER_CERT, cert);
+    util::read(PATH_SERVER_KEY, key);
+    util::read(PATH_CA_CERT, root);
 
     ServerBuilder builder;
 
@@ -20,11 +22,11 @@ void RunServer()
     sslOps.pem_key_cert_pairs.push_back(keycert);
 
     builder.AddListeningPort(server_address, grpc::SslServerCredentials(sslOps));
-    WechatPayServiceImpl service;
+    WechatPayServerServiceImpl service;
     builder.RegisterService(&service);
 
-    std::unique_ptr<Server> server(builder.BuildAndStart());
-    std::cout << "Server listening on " << server_address << std::endl;
+    unique_ptr<Server> server(builder.BuildAndStart());
+    cout << "Server listening on " << server_address << " for requests from clients！" << endl;
 
     server->Wait(); // 阻塞提供服务，grpc实现多路复用
 }

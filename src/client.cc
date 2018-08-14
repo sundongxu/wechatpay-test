@@ -5,17 +5,7 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
-    string cert;
-    string key;
-    string root;
-    string server{"localhost:50051"};
-
-    util::read("/Users/sundongxu/Code/Git/Mine/Work/wechatpay/wechatpay/wechatpay-test/crt/client.crt", cert);
-    util::read("/Users/sundongxu/Code/Git/Mine/Work/wechatpay/wechatpay/wechatpay-test/crt/client.key", key);
-    util::read("/Users/sundongxu/Code/Git/Mine/Work/wechatpay/wechatpay/wechatpay-test/crt/ca.crt", root);
-
-    WechatPayClient client(cert, key, root, server);
-
+    WechatPayClient *client = WechatPayClient::GetInstance();
     // 命令行交互
     bool stop = false;
     bool first = true;
@@ -69,7 +59,18 @@ int main(int argc, char **argv)
                 getline(cin, username);
                 cout << "请输入密码：" << endl;
                 getline(cin, password);
-                ret = client.Login(username, password);
+                ret = client->Login(username, password);
+                if (ret == 0)
+                {
+                    // 登录成功，即创建新线程监听强制下线请求
+                    // cout << "创建新线程监听强制下线请求" << endl;
+                    int rc = client->StartListen(); // 发生在登录前还是发生在登录后
+                    // int rc = pthread_create(client.GetListener(), nullptr, ListenKickOff, (void *)&client);
+                    if (rc != 0)
+                    {
+                        cout << "客户端创建监听(下线PUSH消息)线程失败！" << endl;
+                    }
+                }
                 break;
             }
             case CMD_REGISTER:
@@ -94,7 +95,7 @@ int main(int argc, char **argv)
                     cout << "请再次输入密码：" << endl;
                     getline(cin, passwordRepeat);
                 } while (passwordRepeat != password);
-                ret = client.Register(username, password);
+                ret = client->Register(username, password);
                 break;
             }
 
@@ -104,21 +105,24 @@ int main(int argc, char **argv)
                 string msg;
                 cout << "请输入发送内容：" << endl;
                 getline(cin, msg);
-                ret = client.Interact(msg);
+                ret = client->Interact(msg);
                 break;
             }
 
             case CMD_LOGOUT:
             {
                 cout << "-----登出操作-----" << endl;
-                ret = client.Logout();
+                ret = client->Logout();
                 break;
             }
 
             case CMD_QUIT:
             {
                 cout << "-----关闭客户端-----" << endl;
-                ret = client.Logout();  // 退出前发出下线请求
+                if (client->IsLogin())
+                {
+                    ret = client->Logout(); // 退出前发出下线请求
+                }
                 stop = true;
                 break;
             }
