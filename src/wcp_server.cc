@@ -1,6 +1,6 @@
 #include "src/include/entity.h"
 #include "src/include/comm_def.h"
-#include "src/include/bcrypt/BCrypt.hpp"
+#include "include/bcrypt/BCrypt.hpp"
 
 Status WechatPayServerServiceImpl::Register(ServerContext *context,
                                             const Request *request,

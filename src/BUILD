@@ -2,21 +2,10 @@ package(default_visibility = ["//visibility:public"])
 
 # proto rules
 load("@org_pubref_rules_protobuf//cpp:rules.bzl", "cc_proto_library")
-
 cc_proto_library(
     name = "demo_proto",
     protos = ["demo.proto"],
     with_grpc = True,
-)
-
-cc_import(
-    name = "hiredis",
-    static_library = "libhiredis.a",
-)
-
-cc_import(
-    name = "bcrypt",
-    static_library = "libbcrypt.a",
 )
 
 cc_library(
@@ -34,16 +23,6 @@ cc_library(
 )
 
 cc_library(
-    name = "hiredis_handler",
-    hdrs = glob([
-        "include/hiredis/*.h",
-    ]),
-    deps = [
-        ":hiredis",
-    ],
-)
-
-cc_library(
     name = "redis_handler",
     hdrs = [
         "include/redis_handler.h",
@@ -52,18 +31,7 @@ cc_library(
         "redis_handler.cc",
     ],
     deps = [
-        ":hiredis_handler",
-    ],
-)
-
-cc_library(
-    name = "bcrypt_handler",
-    hdrs = glob([
-        "include/bcrypt/*.hpp",
-        "include/bcrypt/*.h",
-    ]),
-    deps = [
-        ":bcrypt",
+        "@myhiredis//:hiredis",
     ],
 )
 
@@ -80,7 +48,7 @@ cc_library(
         ":comm",
         ":util",
         ":redis_handler",
-        ":bcrypt_handler",
+        "@mybcrypt//:libbcrypt",
         ":demo_proto",
     ],
 )

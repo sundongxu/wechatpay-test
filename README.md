@@ -80,33 +80,9 @@
 2. [**hiredis**](https://github.com/redis/hiredis)
 3. [**libbcrypt**](https://github.com/trusch/libbcrypt)
 
-以上依赖均以子模块(**submodules**)形式添加到本项目，执行以下命令将依赖下载到本地：
+以上依赖均通过bazel管理，一键编译安装：
 ```shell
-git clone 
-git submodule update --initv
-```
-
-执行以下命令配置**grpc**依赖：
-```shell
-cd third_party/grpc
-git submodule update --init # 将grpc的依赖下载到本地
-# 配置grpc的protobuf依赖
-cd third_party/protobuf
-make && sudo make install # 安装protobuf依赖
-cd ..
-make && sudo make install # 安装grpc依赖
-```
-
-执行以下命令配置**hiredis**依赖：
-```shell
-cd third_party/hiredis
-make & sudo make install # 安装hiredis依赖
-```
-
-执行如下命令安装**libbcrypt**依赖：
-```shell
-cd third_party/libbcrypt
-make & sudo make install # 安装libbcrypt依赖
+bazel build //src:all
 ```
 
 ### Redis部署
@@ -124,20 +100,23 @@ cd crt
 ./gen-crt.sh
 ```
 ps.
-> 特别注意`src/include/comm_def.h`头文件中定义了的证书及密钥文件路径，此处采用绝对路径，需根据个人实际运行环境修改
+> 特别注意`src/include/comm_def.h`头文件中定义了的证书及密钥文件路径，此处暂时采用绝对路径，需根据个人实际运行环境修改
 
 ### 编译
-支持**make**与**bazel**两种构建方式，编译生成两个可执行文件：`server`和`client`
+支持**bazel**与**make**两种构建方式，编译生成两个可执行文件：`server`和`client`
+#### bazel
+```shell
+bazel build //src:all
+```
+上述命令配置安装依赖同时编译工程，输出的可执行文件位于路径`bazel-bin/src`下
 #### make
+本项目默认支持**bazel**编译，如要采用**make**编译，需修改部分文件的头文件**#include**路径
 执行如下命令编译：
 ```shell
 cd src
 make -j
 ```
-#### bazel
-```shell
-bazel build //src:all
-```
+
 ### 运行
 ```shell
 cd bazel-bin/src
