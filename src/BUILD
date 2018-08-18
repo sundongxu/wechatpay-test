@@ -44,6 +44,9 @@ cc_library(
         "wcp_client.cc",
         "wcp_server.cc",
     ],
+    linkopts = [
+        "-pthread",
+    ],
     deps = [
         ":comm",
         ":util",

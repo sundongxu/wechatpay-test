@@ -18,7 +18,7 @@ WechatPayClient::WechatPayClient()
     util::generateDeviceId(deviceId); // 一台终端唯一标识
     user = nullptr;
     isLogin = false;
-    listener = 0;
+    // listener = 0;
 }
 
 WechatPayClient *WechatPayClient::client = nullptr;
@@ -73,7 +73,7 @@ int WechatPayClient::Login(const string &username, const string &password)
 
         Response reply;
         ClientContext context;
-        Status status = stub_->Login(&context, request, &reply); // 被踢下线重新登录会崩！
+        Status status = stub_->Login(&context, request, &reply);
         if (status.ok())
         {
             // RPC调用成功，根据返回状态码确定登录结果
@@ -248,94 +248,32 @@ int WechatPayClient::Interact(const string &msg)
     return 0;
 }
 
-int WechatPayClient::StartListen()
+int WechatPayClient::KeepAlive(const string &username)
 {
-    //
-    int rc = pthread_create(&listener, nullptr, &WechatPayClient::ListenKickOff, nullptr);
-    if (rc == 0)
+    Request request;
+    request.set_username(username);
+    ClientContext context;
+    unique_ptr<ClientReader<Response>> reader(
+        stub_->KeepAlive(&context, request));
+    Response response;
+    while (reader->Read(&response))
     {
-        // cout << "监听线程创建成功！" << endl;
+        if (response.status_code() == USER_KICK_OFF)
+        {
+            cout << "用户已在别处登录，本终端强制下线！" << endl;
+            cout << "请继续输入：" << endl;
+            ResetLoginState();
+        }
+    }
+    Status status = reader->Finish();
+    if (status.ok())
+    {
+        // cout << "保活rpc返回成功！" << endl;
     }
     else
     {
-        cout << "监听线程创建失败" << endl;
+        // cout << "保活rpc返回失败！" << endl;
         return -1;
     }
     return 0;
-}
-
-void *WechatPayClient::ListenKickOff(void *arg)
-{
-    // 获取单例
-    WechatPayClient *c = WechatPayClient::GetInstance();
-    // 创建监听server，在50052端口上监听来自服务端的强制下线请求
-    string listen_address("0.0.0.0:50052");
-
-    string key;
-    string cert;
-    string root;
-
-    util::read(PATH_CLIENT_CERT, cert);
-    util::read({PATH_CLIENT_KEY}, key);
-    util::read(PATH_CA_CERT, root);
-
-    ServerBuilder builder;
-
-    SslServerCredentialsOptions::PemKeyCertPair keycert = {key, cert};
-    SslServerCredentialsOptions sslOps;
-    sslOps.pem_root_certs = root;
-    sslOps.pem_key_cert_pairs.push_back(keycert);
-
-    builder.AddListeningPort(listen_address, grpc::SslServerCredentials(sslOps));
-    WechatPayClientServiceImpl service;
-    builder.RegisterService(&service);
-
-    // 绑定客户端与客户端服务对象
-    service.BindClient(c);
-
-    unique_ptr<Server> server(builder.BuildAndStart());
-    cout << "Client listening on " << listen_address << " for Kick-Off message from server！" << endl;
-
-    server->Wait(); // 阻塞提供服务，grpc实现多路复用
-    return nullptr;
-}
-
-Status WechatPayClientServiceImpl::KickOff(ServerContext *context,
-                                           const Request *request,
-                                           Response *reply)
-{
-    // 客户端提供给服务端的强制下线接口
-    if (wcp_client->IsLogin() && wcp_client->GetUser() != nullptr)
-    {
-        // 已登录，则当前客户端下线
-        string username = request->username();
-        string deviceId = request->device_id();
-        // cout << "当前客户端设备ID：" << wcp_client->GetDeviceId() << endl;
-        // cout << "服务端想踢下线的客户端设备ID：" << deviceId << endl;
-        if (username == wcp_client->GetUser()->getName() && deviceId == wcp_client->GetDeviceId())
-        {
-            // 验证用户名及客户端设备ID
-            // 还原客户端登录态
-            wcp_client->ResetLoginState();
-            // 取消监听消息线程
-            pthread_cancel(wcp_client->GetListener());
-            void *ret = nullptr;
-            // 回收线程资源
-            pthread_join(wcp_client->GetListener(), &ret);
-            reply->set_status_code(USER_KICKED_OFF_SUCCESS);
-            cout << "用户已在别处登录，本客户端强制下线！" << endl
-                 << "请继续输入：" << endl;
-        }
-        else
-        {
-            // 正常不会走到这
-            reply->set_status_code(USER_KICKED_OFF_FAILURE);
-        }
-    }
-    else
-    {
-        // 正常不会走到这
-        reply->set_status_code(USER_KICKED_OFF_FAILURE);
-    }
-    return Status::OK;
 }

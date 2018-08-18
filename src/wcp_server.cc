@@ -52,9 +52,6 @@ Status WechatPayServerServiceImpl::Login(ServerContext *context,
     string password = request->password();
     string deviceId = request->device_id();
 
-    // grpc::string peerUri = context->peer();
-    // cout << "ServerContext URI:" << peerUri << endl;
-
     cout << "登录服务，用户名：" << username << endl;
     cout << "请求登录的客户端的设备ID：" << deviceId << endl;
 
@@ -64,12 +61,14 @@ Status WechatPayServerServiceImpl::Login(ServerContext *context,
     if (ret != 0)
     {
         // redis连接失败
+        // reply->set_status_code(DB_NOT_CONNECTED);
         reply->set_status_code(DB_NOT_CONNECTED);
     }
     else
     {
+        // redis连接成功
         string strVal;
-        handler->GetString(username, strVal);
+        handler->GetString(username, strVal); // 查询数据库中是否有该用户注册信息
         if (strVal == "")
         {
             // 用户名尚未注册，不可登录
@@ -83,26 +82,23 @@ Status WechatPayServerServiceImpl::Login(ServerContext *context,
                 // 密码正确，登录成功，且分两种情况：
                 // (1) 之前无在线终端
                 // (2) 之前有在线终端，需将其踢下线
-                // 故还需查询在线用户列表
-                auto iter = active_users.find(username);
+                auto iter = active_users.find(username); // 查询在线用户列表
                 if (iter != active_users.end())
                 {
-                    // 之前已登录，仍需验证密码
+                    // 之前已登录
                     // 密码正确则将原终端踢下线，即修改在线用户列表
+                    // 先踢唤醒观察者(旧终端对应的条件变量))，令其返回KeepAlive rpc返回
+                    shouldKickOff = true;              // 旧终端的KeepAlive应该写会一个下线消息
+                    observers[username]->notify_all(); // 唤醒观察者
+                    observers.erase(username);         // 注销观察者
                     reply->set_status_code(USER_KICK_OTHERS_OFF_SUCCESS);
-                    // 调用KickOff接口，注意这里要传的参数是旧设备ID
-                    int ret = KickOff(context->peer(), username, active_users[username]);
-                    if (ret != 0)
-                    {
-                        cout << "踢下线时发生错误！" << endl;
-                    }
                 }
                 else
                 {
-                    // 未登录，则登录
+                    // 之前未登录，则用户当前“首次”登录(正常登录逻辑，无需踢人下线)
                     reply->set_status_code(USER_REQUEST_SUCCESS);
                 }
-                active_users[username] = deviceId;
+                active_users[username] = deviceId; // 更新在线用户列表
             }
             else
             {
@@ -111,65 +107,7 @@ Status WechatPayServerServiceImpl::Login(ServerContext *context,
             }
         }
     }
-
-    return Status::OK;
-}
-
-int WechatPayServerServiceImpl::KickOff(const string &peerUri, const string &username, const string &deviceId)
-{
-    // 踢设备ID为DeviceId的设备下线，客户端的IP:port信息存储在peerUrl
-    // 使用stub调用客户端的KickOff方法令其下线
-    string key;
-    string cert;
-    string root;
-
-    util::read(PATH_SERVER_CERT, cert);
-    util::read(PATH_SERVER_KEY, key);
-    util::read(PATH_CA_CERT, root);
-
-    grpc::SslCredentialsOptions opts = {root, key, cert};
-    // string client{peerUri}; // IPv6地址有坑，先提取出端口号吧
-
-    // size_t pos = peerUri.find_last_of(":");
-    // string port = peerUri.substr(pos + 1);
-    // cout << "客户端端口号：" << port << endl;
-    string client{"localhost:50052"};
-    // cout << "客户端地址：" << client << endl;
-    unique_ptr<ClientService::Stub> stub = ClientService::NewStub(CreateChannel(
-        client, SslCredentials(opts)));
-    ;
-
-    // 构造请求
-    Request request;
-    request.set_username(username);
-    request.set_device_id(deviceId);
-
-    Response reply;
-    ClientContext context;
-
-    Status status = stub->KickOff(&context, request, &reply);  // 让客户端崩了
-    if (status.ok())
-    {
-        // RPC调用成功。根据返回状态码确定注册结果
-        switch (reply.status_code())
-        {
-        case USER_KICKED_OFF_SUCCESS:
-            cout << "旧设备挤下线成功！" << endl;
-            break;
-        case USER_KICKED_OFF_FAILURE:
-            cout << "旧设备挤下线失败！" << endl;
-            return -1;
-        }
-    }
-    else
-    {
-        // RPC调用失败
-        cout << "挤下线失败：RPC调用失败！" << endl;
-        cout << status.error_code() << ": " << status.error_message()
-             << endl;
-        return -1;
-    }
-    return 0;
+    return Status::OK; // 回包Write完毕，则RPC调用返回
 }
 
 Status WechatPayServerServiceImpl::Logout(ServerContext *context,
@@ -194,6 +132,10 @@ Status WechatPayServerServiceImpl::Logout(ServerContext *context,
             // 在线设备仍是本终端
             active_users.erase(iter);
             reply->set_status_code(USER_REQUEST_SUCCESS);
+            // 加个标志位
+            shouldKickOff = false; // KeepAlive不该写回一个下线消息，直接返回即可，因为是正常下线逻辑
+            observers[username]->notify_all();
+            observers.erase(username);
         }
         else
         {
@@ -243,5 +185,31 @@ Status WechatPayServerServiceImpl::Interact(ServerContext *context,
         reply->set_status_code(USER_LOGIN_ANOTHER_PLACE);
     }
 
+    return Status::OK;
+}
+
+// 在客户端创建时，登录之前就要被rpc调用
+// 服务端在Login服务中决定是否写入下线消息踢旧终端下线
+Status WechatPayServerServiceImpl::KeepAlive(ServerContext *context,
+                                             const Request *request,
+                                             ServerWriter<Response> *writer)
+{
+    // 保活逻辑，登录后发起
+    string username = request->username();
+    cout << "保活服务，用户名：" << username << endl;
+    condition_variable cv;
+    if (observers.find(username) == observers.end())
+    {
+        observers[username] = &cv; // 注册观察者
+    }
+    std::unique_lock<std::mutex> lk(cv_m);
+    cv.wait(lk); // 阻塞在该锁上，不返回
+    // 一旦返回则说明该服务要回复一个下线消息令对端下线
+    if (shouldKickOff)
+    {
+        Response kickOffMsg;
+        kickOffMsg.set_status_code(USER_KICK_OFF);
+        writer->Write(kickOffMsg);
+    }
     return Status::OK;
 }

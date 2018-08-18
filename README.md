@@ -14,7 +14,10 @@
 ## 实现思路
 ---
 ### 客户端
-客户端通过**UUID**唯一标识，并用本地标志位`isLogin`保持登录状态，远程调用服务端方法`Register`、`Login`、`Logout`与`Interact`分别执行注册、登录、登出及交互操作。为实现单终端登录功能，客户端同时提供强制下线服务，其登录成功后将创建新线程，以监听来自服务端的强制下线请求，一旦收到强制下线请求后则还原本客户端登录态，并取消并回收监听线程。
+客户端通过**UUID**唯一标识，并用本地标志位`isLogin`保持登录状态，远程调用服务端方法`Register`、`Login`、`Logout`与`Interact`分别执行注册、登录、登出及交互操作。为实现单终端登录功能，客户端成功登录后将创建一个单独线程，在其中调用服务端`KeepAlive`(保活)服务，该服务阻塞，直至出现下述两种场景时方才返回：</br>
+① 该用户在别处登录，此时服务端将回写一个强制下线消息(**USER_KICK_OFF**，状态码含义见后文) </br>
+② v该用户执行正常下线操作(登出或退出)
+`KeepAlive`调用返回后，客户端解析回包类型(状态码)，输出提示语，并还原本地登录态
 #### 注册
 客户端发送注册请求无需提前登录，在请求中设置用户名与密码，根据返回状态码确定注册结果。
 #### 登录
@@ -23,30 +26,45 @@
 客户端发送登出请求前需先判断当前是否已登录，若未登录(`isLogin`为`false`)则不发送请求，已登录时才发送请求，并在请求中设置用户名与设备ID(**UUID**)，根据返回状态码确定登录结果。
 #### 交互
 客户端发送交互请求需先判断当前是否已登录，若未登录(`isLogin`为`false`)则不发送请求，已登录时才发送请求，并在请求中设置用户名、设备ID(**UUID**)与回显信息，根据返回状态码确定登录结果。
+#### 保活
+客户端登录成功后即创建监听线程，在该线程中发送请求，并在请求中设置用户名，调用返回时即还原本地登录态。
 
 ### 服务端
-服务端采用**Redis**存储用户数据(用户名与密码hash值)，使用**Bcrypt**算法对密码加密后存储，定义并实现了注册、登录、登出以及交互四种服务供客户端调用。服务端在本地利用一个`map`变量存储在线用户列表(用户名到设备ID的映射)，用户在新终端登录时，服务端更新在线用户列表，并通过`GRPC`远程调用客户端提供的下线方法，主动Push一个强制下线请求给旧终端，从而将旧终端踢出。
+服务端采用**Redis**存储用户数据(用户名与密码hash值)，使用**Bcrypt**算法对密码加密后存储，定义并实现了注册、登录、登出以及交互四种服务供客户端调用。</br>
+服务端在本地利用一个`map<string, string>`类型变量`active_users`存储在线用户列表(用户名到设备ID的映射)，用户在新终端登录时，服务端更新在线用户列表，通过观察者(条件变量)通知`KeepAlive`服务返回，并回写一个强制下线消息(状态码**USER_KICK_OFF**)
+
+
+并通过`GRPC`远程调用客户端提供的下线方法，主动Push一个强制下线请求给旧终端，从而将旧终端踢出。
 #### 注册
 服务端接收到注册请求后，提取出用户名与密码，以用户名为**Key**查询Redis，若Redis连接失败或用户名已存在则注册失败，并通过状态码加以区分，否则将用户名及密码hash值存入Redis，返回注册成功。
 
 #### 登录
-服务端接收到登录请求后，提取出用户名、密码与设备ID，首先以用户名为**Key**查询Redis，若用户名存在则验证密码正确性。密码正确则再查询在线用户列表，若之前已登录则将旧终端踢出，未登录则正常登录，并修改在线用户列表。Redis连接失败、密码错误或用户名不存在则登录失败，并通过状态码加以区分。
+服务端接收到登录请求后，提取出用户名、密码与设备ID，首先以用户名为**Key**查询Redis，若用户名存在则验证密码正确性。密码正确则再查询在线用户列表，若之前已登录通知保活服务返回，并回写一个强制下线消息(状态码**USER_KICK_OFF**)，客户端接收后即还原登录态，从而实现将旧终端踢出。未登录则正常登录，并修改在线用户列表。Redis连接失败、密码错误或用户名不存在则登录失败，并通过状态码加以区分。
 
 #### 登出
-服务端接收到登出请求后，提取出用户名与设备ID，查询在线用户列表，若用户已在线并且设备ID与请求终端的设备ID相同，则正常下线，删除在线用户列表中对应项。若设备ID与请求终端的设备ID不同，则用户已在别处登录，并通过状态码告知请求终端。
+服务端接收到登出请求后，提取出用户名与设备ID，查询在线用户列表，若用户已在线并且设备ID与请求终端的设备ID相同，则正常下线，删除在线用户列表中对应项。若设备ID与请求终端的设备ID不同，则用户已在别处登录，并通过状态码告知请求终端。通知保活服务返回，不回写消息表明是正常下线逻辑，客户端调用返回后即还原登录态。
 
 #### 交互
 服务端接收到交互请求后，提取出用户名、设备ID与回显内容，查询在线用户列表，若用户已在线并且设备ID与请求终端的设备ID相同，则正常回显。若设备ID与请求终端的设备ID不同，则用户已在别处登录，并通过状态码告知请求终端。
 
+#### 保活
+服务端提供此服务给客户端的监听线程调用，将为该在线用户注册一个新观察者，用户在该终端登录期间服务一直阻塞不返回，阻塞采用条件变量(观察者)调用`wait`方法实现，每个在线用户都对应一个观察者条件变量，存储在一个`map<string, condition_variable *>`类型变量`observers`中。当前已在线用户在新终端调用`Login`服务将调用`notify_all`方法唤醒观察者条件变量，并注销观察者，使得保活服务返回，并回写一个强制下线消息，客户端接收到此消息后将提示用户已被踢出，并还原登录态。此外，用户在执行登出或退出操作时均会发起`Logout`服务调用，故在`Logout`服务中也要唤醒观察者并注销观察者，但是并不回写任何类型的消息，以与强制下线情况区分，客户端监听线程`KeepAlive`调用返回后仅需还原其本地登录态即可。
+
 ### 踢下线功能
-先后实现了`Pull`和`Push`两种方式，最新版本采用`Push`方式。
-#### Pull方式(旧)
+先后实现了`Pull`和`Push`两种方式，共三个版本，当前最新版本采用`Push`方式，利用`GRPC`提供的`Streaming RPC`能力实现。各版本说明如下：
+
+#### Pull方式
 服务端在检测到一个已在线用户在新终端发起登录请求后，更新在线用户列表，为新终端正常提供服务。
 而对于旧终端，则在其下次请求服务时，通过返回状态码告知其用户已在别处登录，即其已被挤下线，需要访问服务则需先登录，客户端接收到此回复后还原其本地登录态。
-#### Push方式(新)
+
+#### Push方式(反向RPC)
 客户端登录成功后，将新建一个单独的线程，通过`GRPC`创建一个监听服务器实例，监听来自服务端的下线请求。
 服务端在检测到一个已在线用户在新终端发起登录请求后，先通过`GRPC`主动调用客户端提供的强制下线服务接口，随后更新在线用户列表。
 客户端则在接收到一个来自服务端的强制下线请求后，还原本地登录态，取消监听线程并回收其占用资源。
+
+#### Push方式(Streaming RPC))
+服务端增加一个`KeepAlive`服务，客户端登录成功后新建监听线程并调用此服务。`KeepAlive`服务阻塞直至 (1) 当前已在线用户在新设备上登录，需将旧设备踢下线，服务端发送一个强制下线消息(状态码**USER_KICK_OFF**) (2) 当前已在线用户发起`Logout`调用请求(登出或退出)，即正常下线，此时服务端不回写任何类型的消息。</br>
+此服务调用返回后，客户端根据接收到的消息类型输出用户提示，并还原本地登录态。
 
 ### 状态码
 服务端通过在回复`Response`结构中设置状态码以区分不同类型的请求处理结果及对应原因。
@@ -62,14 +80,13 @@
 
 |状态码|常量|描述|   
 |:-:|:-:|:-|
+|100|USER_KICK_OFF|特殊类型，强制下线消息|
 |200|USER_REQUEST_SUCCESS|用户请求处理成功|
 |201|USER_KICK_OTHERS_OFF_SUCCESS|用户请求处理成功，并将旧登录设备踢出，用于登录操作|
-|202|USER_KICKED_OFF_SUCCESS|服务端检测到当前在线用户在新终端登录后，Push下线消息给原终端，强制用户下线成功|
 |400|USER_ALREADY_EXIST|用户名已存在，用于注册操作|
 |401|USER_NOT_FOUND|用户名不存在，用于登录操作|
 |402|USER_PASSWORD_WRONG|密码不正确，用于登录操作|
 |403|USER_LOGIN_ANOTHER_PLACE|用户已在别处登录，用于登出及交互操作|
-|404|USER_KICKED_OFF_FAILURE|服务端检测到当前在线用户在新终端登录后，Push下线消息给原终端，强制用户下线失败|
 |500|DB_NOT_CONNECTED|数据库连接失败，服务端错误|
 
 ## 编译运行
@@ -128,35 +145,17 @@ cd bazel-bin/src
 ### 系统截图
 #### 客户端运行功能测试
 客户端各项功能测试：
-![客户端运行功能测试](https://github.com/sundongxu/wechatpay-test/raw/master/img/version_push/normal_test_client.png)
+![客户端运行功能测试](https://github.com/sundongxu/wechatpay-test/raw/master/img/version_3_push_streaming_rpc/normal_test_client.png)
 
 对应后端服务调用情况：
-![服务端运行功能测试](https://github.com/sundongxu/wechatpay-test/raw/master/img/version_push/normal_test_server.png)
+![服务端运行功能测试](https://github.com/sundongxu/wechatpay-test/raw/master/img/version_3_push_streaming_rpc/normal_test_server.png)
 
 #### 踢下线功能测试
 第一个登录的客户端：
-![第一个登陆的客户端](https://github.com/sundongxu/wechatpay-test/raw/master/img/version_push/kickoff_test_client_old.png)
+![第一个登陆的客户端](https://github.com/sundongxu/wechatpay-test/raw/master/img/version_3_push_streaming_rpc/kickoff_test_client_old.png)
 
 另一个登录相同用户的客户端：
-![另一个登录的客户端](https://github.com/sundongxu/wechatpay-test/raw/master/img/version_push/kickoff_test_client_new.png)
+![另一个登录的客户端](https://github.com/sundongxu/wechatpay-test/raw/master/img/version_3_push_streaming_rpc/kickoff_test_client_new.png)
 
 对应后端服务调用情况：
-![服务端服务调用](https://github.com/sundongxu/wechatpay-test/raw/master/img/version_push/kickoff_test_server.png)
-
-## 完成进度
----
-### Day 1(8月7日，周二)
-1. 编译安装GRPC及其全部依赖(已完成)
-2. 编写`demo.proto`协议文件，及对应client、server相关功能及交互代码(部分完成)
-3. 基于openssl编写证书生成脚本`gen-crts.sh`，利用证书和GPRC提供的TLS/SSL支持实现客户端与服务端的双向认证和加密传输(已完成)
-
-### Day 2(8月11日，周六)
-1. 安装docker，在docker中部署Redis服务依赖，编写`Dockerfile`一键部署Redis服务
-2. 编译安装hiredis(Redis C++客户端库)、libcrypt(Bcrypt加密算法C++库)
-3. bazel构建项目(暂未完成，报错头文件未找到，#include文件路径问题)
-4. 编写client、server相关功能及交互代码(全部完成)
-
-### Day 3(8月12日，周日)
-1. 更新`Makefile`，编译通过
-2. 调试功能代码，测试通过
-3. 修改`BUILD`文件，bazel编译通过
+![服务端服务调用](https://github.com/sundongxu/wechatpay-test/raw/master/img/version_3_push_streaming_rpc/kickoff_test_server.png)

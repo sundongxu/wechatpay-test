@@ -20,13 +20,10 @@ message Response {
 
 // 声明服务，由服务端具体实现
 service ServerService {
-    rpc Register (Request) returns (Response) {}    // 注册服务
-    rpc Login (Request) returns (Response) {}       // 登录服务
-    rpc Logout (Request) returns (Response) {}      // 登出服务
-    rpc Interact (Request) returns (Response) {}    // 交互服务(回显echo)
-}
-
-// 声明服务，由客户端具体实现
-service ClientService {
-    rpc KickOff (Request) returns (Response) {}     // 踢下线服务
+    rpc Register (Request) returns (Response) {}           // 注册服务
+    rpc Login (Request) returns (Response) {}              // 登录服务
+    rpc Logout (Request) returns (Response) {}             // 登出服务
+    rpc Interact (Request) returns (Response) {}           // 交互服务(回显echo)
+    rpc KeepAlive (Request) returns (stream Response) {}   // 保活服务(终端登录后发起，服务端阻塞直至新终端登录，将旧终端踢出
+    // KeepAlive调用返回则客户端应该下线，包括强制下线(当前已在线用户在别处登录)和正常下线
 }

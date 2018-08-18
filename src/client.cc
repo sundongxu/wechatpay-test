@@ -3,9 +3,20 @@
 
 using namespace std;
 
+void listen(WechatPayClient *client, string username)
+{
+    // 调用保活服务，返回时说明需要下线了
+    int ret = client->KeepAlive(username); // 一直阻塞至服务端Push下线消息
+    if (ret == 0)
+    {
+        // cout << "监听线程结束，准备回收！" << endl;
+    }
+}
+
 int main(int argc, char **argv)
 {
     WechatPayClient *client = WechatPayClient::GetInstance();
+    std::thread listener; // 监听线程，未初始化
     // 命令行交互
     bool stop = false;
     bool first = true;
@@ -59,17 +70,14 @@ int main(int argc, char **argv)
                 getline(cin, username);
                 cout << "请输入密码：" << endl;
                 getline(cin, password);
+                // 双向stream实现踢下线，客户端提供下线回调
                 ret = client->Login(username, password);
                 if (ret == 0)
                 {
-                    // 登录成功，即创建新线程监听强制下线请求
-                    // cout << "创建新线程监听强制下线请求" << endl;
-                    int rc = client->StartListen(); // 发生在登录前还是发生在登录后
-                    // int rc = pthread_create(client.GetListener(), nullptr, ListenKickOff, (void *)&client);
-                    if (rc != 0)
-                    {
-                        cout << "客户端创建监听(下线PUSH消息)线程失败！" << endl;
-                    }
+                    // 登录成功后启动监听线程
+                    // cout << "启动监听线程！" << endl;
+                    listener = std::thread(listen, client, username);
+                    // cout << "监听线程创建完毕！" << endl;
                 }
                 break;
             }
@@ -129,5 +137,6 @@ int main(int argc, char **argv)
             }
         }
     }
+    listener.join(); // 回收监听线程资源
     return 0;
 }
