@@ -48,6 +48,13 @@
 #### 保活
 服务端提供此服务给客户端的监听线程调用，将为该在线用户注册一个新观察者，用户在该终端登录期间服务一直阻塞不返回，阻塞采用条件变量(观察者)调用`wait`方法实现，每个在线用户都对应一个观察者条件变量，存储在一个`map<string, condition_variable *>`类型变量`observers`中。当前已在线用户在新终端调用`Login`服务将调用`notify_all`方法唤醒观察者条件变量，然后注销观察者，使得保活服务返回，并回写一个强制下线消息，客户端接收到此消息后将提示用户已被踢出，并还原登录态。此外，用户在执行登出或退出操作时均会发起`Logout`服务调用，故在`Logout`服务中也要唤醒观察者，然后注销观察者，但是并不回写任何类型的消息，以与强制下线情况区分，客户端监听线程`KeepAlive`调用返回后仅需还原其本地登录态即可。
 
+### 时序图
+本项目前后端交互时序图如下：
+![正常交互逻辑](https://github.com/sundongxu/wechatpay-test/raw/master/img/sequence/normal.png)
+
+正常交互逻辑和下线消息监听逻辑属于不同线程，不太方便在同一时序图中给出，单独给出监听调用时序图如下：
+![监听交互逻辑]](https://github.com/sundongxu/wechatpay-test/raw/master/img/sequence/kickoff.png)
+
 ### 踢下线功能
 先后实现了`Pull`和`Push`两种方式，共三个版本，当前最新版本采用`Push`方式，利用`GRPC`提供的`Streaming RPC`能力实现。各版本说明如下：
 
@@ -153,7 +160,7 @@ cd crt
 ./gen-crt.sh
 ```
 ps.
-> 特别注意`src/include/comm_def.h`头文件中定义了的证书及密钥文件路径，此处暂时采用绝对路径，需根据个人实际运行环境修改
+> 特别注意，本项目用到的测试证书及密钥文件路径在`src/include/comm_def.h`头文件中指定，此处暂时采用绝对路径，需根据个人实际运行环境修改
 
 ### 编译
 支持**bazel**与**make**两种构建方式，编译生成两个可执行文件：`server`和`client`
@@ -181,17 +188,17 @@ cd bazel-bin/src
 ### 系统截图
 #### 客户端运行功能测试
 客户端各项功能测试：
-![客户端运行功能测试](https://github.com/sundongxu/wechatpay-test/raw/master/img/version_3_push_streaming_rpc/normal_test_client.png)
+![客户端运行功能测试](https://github.com/sundongxu/wechatpay-test/raw/master/img/running/version_3_push_streaming_rpc/normal_test_client.png)
 
 对应后端服务调用情况：
-![服务端运行功能测试](https://github.com/sundongxu/wechatpay-test/raw/master/img/version_3_push_streaming_rpc/normal_test_server.png)
+![服务端运行功能测试](https://github.com/sundongxu/wechatpay-test/raw/master/img/running/version_3_push_streaming_rpc/normal_test_server.png)
 
 #### 踢下线功能测试
 第一个登录的客户端：
-![第一个登陆的客户端](https://github.com/sundongxu/wechatpay-test/raw/master/img/version_3_push_streaming_rpc/kickoff_test_terminal_old.png)
+![第一个登陆的客户端](https://github.com/sundongxu/wechatpay-test/raw/master/img/running/version_3_push_streaming_rpc/kickoff_test_terminal_old.png)
 
 另一个登录相同用户的客户端：
-![另一个登录的客户端](https://github.com/sundongxu/wechatpay-test/raw/master/img/version_3_push_streaming_rpc/kickoff_test_terminal_new.png)
+![另一个登录的客户端](https://github.com/sundongxu/wechatpay-test/raw/master/img/running/version_3_push_streaming_rpc/kickoff_test_terminal_new.png)
 
 对应后端服务调用情况：
-![服务端服务调用](https://github.com/sundongxu/wechatpay-test/raw/master/img/version_3_push_streaming_rpc/kickoff_test_server.png)
+![服务端服务调用](https://github.com/sundongxu/wechatpay-test/raw/master/img/running/version_3_push_streaming_rpc/kickoff_test_server.png)
