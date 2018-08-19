@@ -18,6 +18,7 @@ WechatPayClient::WechatPayClient()
     util::generateDeviceId(deviceId); // 一台终端唯一标识
     user = nullptr;
     isLogin = false;
+    isListening = false;
     // listener = 0;
 }
 

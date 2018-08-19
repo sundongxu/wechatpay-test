@@ -53,7 +53,7 @@
 ![正常交互逻辑](https://github.com/sundongxu/wechatpay-test/raw/master/img/sequence/normal.png)
 
 正常交互逻辑和下线消息监听逻辑属于不同线程，不太方便在同一时序图中给出，单独给出监听调用时序图如下：
-![监听交互逻辑]](https://github.com/sundongxu/wechatpay-test/raw/master/img/sequence/kickoff.png)
+![监听交互逻辑](https://github.com/sundongxu/wechatpay-test/raw/master/img/sequence/kickoff.png)
 
 ### 踢下线功能
 先后实现了`Pull`和`Push`两种方式，共三个版本，当前最新版本采用`Push`方式，利用`GRPC`提供的`Streaming RPC`能力实现。各版本说明如下：

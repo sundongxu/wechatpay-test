@@ -6,6 +6,7 @@ using namespace std;
 void listen(WechatPayClient *client, string username)
 {
     // 调用保活服务，返回时说明需要下线了
+    client->SetListeningState(true);  // 监听线程开始执行，设置监听标志位
     int ret = client->KeepAlive(username); // 一直阻塞至服务端Push下线消息
     if (ret == 0)
     {
@@ -76,6 +77,11 @@ int main(int argc, char **argv)
                 {
                     // 登录成功后启动监听线程
                     // cout << "启动监听线程！" << endl;
+                    if (client->IsListening())
+                    {
+                        listener.join();                  // 回收后就是不监听了
+                        client->SetListeningState(false); // 重置监听标志位，join后下面又可重新创建监听线程了
+                    }
                     listener = std::thread(listen, client, username);
                     // cout << "监听线程创建完毕！" << endl;
                 }
@@ -137,6 +143,9 @@ int main(int argc, char **argv)
             }
         }
     }
-    listener.join(); // 回收监听线程资源
+    if (client->IsListening())
+    {
+        listener.join(); // 回收监听线程资源
+    }
     return 0;
 }

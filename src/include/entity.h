@@ -66,6 +66,7 @@ private:
   string deviceId;
   User *user;
   bool isLogin;
+  bool isListening; // 监听线程是否已创建
 
 public:
   WechatPayClient();
@@ -91,7 +92,12 @@ public:
     }
   }
   inline bool IsLogin() { return isLogin; }
-  inline User *GetUser() { return user; }
+  inline bool IsListening() { return isListening; }
+  inline void SetListeningState(bool state) { isListening = state; }
+  inline User *GetUser()
+  {
+    return user;
+  }
   inline string GetDeviceId() { return deviceId; }
 };
 
